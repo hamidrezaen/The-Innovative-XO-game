@@ -1,0 +1,300 @@
+#include <iostream>
+#include <vector>
+#include <map>
+#include <fstream>
+#define blue 0
+#define red 1
+#define equal 2
+using namespace std;
+// X, 0 -> blue   O, 1 -> red
+struct Bead
+{
+    int color;
+    int size;
+};
+
+// data of game
+struct TwoP
+{
+    string first;
+    string second;
+    int score;
+};
+vector<TwoP> informations;
+int id_informations = 0;
+string name[2];
+vector<Bead> chart[3][3]; // if empty -> size() = 0
+// chart[3][3]  type: vector<Bead>
+map<string, int> bead[2];
+int turn = blue;
+// end data
+void print_chart()
+{
+    cout << "----------" << endl;
+    for (int i = 0; i < 3; i++)
+    {
+        for (int j = 0; j < 3; j++)
+        {
+            if (chart[i][j].size() == 0)
+            {
+                cout << "|  ";
+            }
+            else if (chart[i][j].back().color == blue)
+            {
+                cout << "|X" << chart[i][j].back().size;
+            }
+            else if (chart[i][j].back().color == red)
+            {
+                cout << "|O" << chart[i][j].back().size;
+            }
+        }
+
+        cout << "|" << endl;
+    }
+    cout << "----------" << endl;
+    if (turn == blue)
+    {
+        cout << "turn blue (X)\n";
+    }
+    else
+    {
+        cout << "turn red (O)\n";
+    }
+}
+
+void start()
+{
+    for (int i = 0; i < 2; i++)
+    {
+        bead[i]["big"] = 2;
+        bead[i]["medium"] = 2;
+        bead[i]["small"] = 2;
+    }
+}
+
+// check 3 taii shodan
+int check_three()
+{
+    // if blue winner . return blue
+    // if red winner . return red
+    // if all chart is full return 2
+    // else return -1
+    for (int i = 0; i < 3; i++)
+    {
+        if (chart[i][0].size() != 0 && chart[i][1].size() != 0 && chart[i][2].size() != 0 && chart[i][0].back().color == chart[i][1].back().color && chart[i][1].back().color == chart[i][2].back().color)
+        {
+            return chart[i][0].back().color;
+        }
+    }
+    for (int i = 0; i < 3; i++)
+    {
+        if (chart[0][i].size() != 0 && chart[1][i].size() != 0 && chart[2][i].size() != 0 && chart[0][i].back().color == chart[1][i].back().color && chart[1][i].back().color == chart[2][i].back().color)
+        {
+            return chart[0][i].back().color;
+        }
+    }
+    if (chart[0][0].size() != 0 && chart[1][1].size() != 0 && chart[2][2].size() != 0 && chart[0][0].back().color == chart[1][1].back().color && chart[1][1].back().color == chart[2][2].back().color)
+    {
+        return chart[0][0].back().color;
+    }
+
+    if (chart[0][2].size() != 0 && chart[1][1].size() != 0 && chart[2][0].size() != 0 && chart[0][2].back().color == chart[1][1].back().color && chart[1][1].back().color == chart[2][0].back().color)
+    {
+        return chart[0][2].back().color;
+    }
+
+    return -1;
+}
+
+void check_in_chart(int x, int y)
+{
+    if (0 > x)
+        throw "x must be >= 0";
+    if (0 > y)
+        throw "y must be >= 0";
+    if (x >= 3)
+        throw "x must be < 3";
+    if (y >= 3)
+        throw "y must be < 3";
+}
+
+void move_bead(int x, int y)
+{
+    int x2, y2;
+    cout << "Enter position that bead want go: ";
+    cin >> x2 >> y2;
+    check_in_chart(x2, y2);
+    if (chart[x2][y2].size() != 0 && chart[x2][y2].back().size >= chart[x][y].back().size)
+    {
+        throw "bead cant move on grator bead";
+    }
+
+    // move successfully
+    Bead b = chart[x][y].back();
+    chart[x][y].pop_back();
+    chart[x2][y2].push_back(b);
+}
+
+// get position from user and push in chart
+void push_bead(Bead b)
+{
+    cout << "Enter your position: ";
+    int x, y;
+    cin >> x >> y;
+    check_in_chart(x, y);
+    if (chart[x][y].size() != 0 && chart[x][y].back().size >= b.size)
+    {
+        throw "cant push on biger bead";
+    }
+    chart[x][y].push_back(b);
+}
+
+// input from user and check
+void one_action_console_manager()
+{
+    // on every action
+    while (true)
+    {
+        try
+        {
+            cout << "you have ";
+            for (auto &i : {"small", "medium", "big"})
+            {
+                cout << ',' << bead[turn][i] << ' ' << i << " bead ";
+            }
+            cout << ".\nEnter <push> or <move>: ";
+            string tmp;
+            cin >> tmp;
+            if (tmp == "push")
+            {
+                cout << "Enter bead: <big> or <medium> or <small>: ";
+                cin >> tmp;
+                if (tmp == "small" || tmp == "medium" || tmp == "big")
+                {
+                    if (bead[turn][tmp] == 0)
+                    {
+                        string s = string("you don't have any ") + tmp + string(" bead");
+                        char *c = new char[s.length() + 1];
+                        copy(s.begin(), s.end(), c);
+                        throw c;
+                    }
+                    Bead b;
+                    b.color = turn;
+                    b.size = (tmp == "small") ? 1 : (tmp == "medium") ? 2
+                                                                      : 3;
+                    push_bead(b);
+                    bead[turn][tmp]--;
+                }
+                else
+                {
+                    throw "incorrect input. just enter <big> or <medium> or <small>";
+                }
+            }
+            else if (tmp == "move")
+            {
+                cout << "Enter position that bead is here: ";
+                int x, y;
+                cin >> x >> y;
+                check_in_chart(x, y);
+                if (chart[x][y].size() == 0)
+                {
+                    throw "no any bead is here";
+                }
+                if (chart[x][y].back().color != turn)
+                {
+                    throw "is not that bead yours";
+                }
+                move_bead(x, y);
+            }
+            else
+            {
+                throw "incorrect input. just enter <push> or <move>";
+            }
+            break;
+        }
+        catch (char const *err)
+        {
+            cout << " -- " << err << " --\n";
+        }
+    }
+}
+
+void load_data()
+{
+    cout << "Enter name player 1 (X):";
+    cin >> name[0]; // blue
+    cout << "Enter name player 2 (O):";
+    cin >> name[1]; // red
+    bool find = false;
+    TwoP f;
+    ifstream fin;
+    fin.open("save");
+    while (!fin.eof())
+    {
+        fin >> f.first >> f.second >> f.score;
+        if (f.first == name[1] && f.second == name[0])
+        {
+            f.score *= -1;
+            swap(f.first, f.second);
+        }
+        if (f.first == name[0] && f.second == name[1])
+        {
+            if (f.score < 0)
+                turn = red;
+            find = true;
+        }
+        if (!find)
+            id_informations++;
+        informations.push_back(f);
+    }
+    if (!find)
+    {
+        f.first = name[0];
+        f.second = name[1];
+        f.score = 0;
+        informations.push_back(f);
+        id_informations = informations.size() - 1;
+    }
+    fin.close();
+}
+
+void save_data()
+{
+    ofstream fout;
+    fout.open("save");
+    for (auto &i : informations)
+    {
+        fout << ' ' << i.first << ' ' << i.second << ' ' << i.score;
+    }
+    fout.close();
+}
+
+int main()
+{
+    start();
+    load_data();
+
+    int gameover = -1;
+    while (gameover == -1)
+    {
+        print_chart();
+        one_action_console_manager();
+        gameover = check_three();
+        turn = (turn == blue) ? red : blue; // change turn
+    }
+    if (gameover == blue)
+    {
+        informations[id_informations].score++;
+        cout << "-- blue is winner --\n";
+    }
+    else if (gameover == red)
+    {
+        informations[id_informations].score--;
+        cout << "-- red is winner --\n";
+    }
+    else if (gameover == equal)
+    {
+        cout << "-- equal, we have no winner! --\n";
+    }
+    save_data();
+}
